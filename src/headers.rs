@@ -8,7 +8,7 @@ pub struct Access {
 }
 
 impl Access {
-    fn validate_hmac(&self, secret: &str, aud: String) -> Result<Claims> {
+    pub fn validate_hmac(&self, secret: &str, aud: String) -> Result<Claims> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_audience(&[aud]);
 
@@ -19,7 +19,7 @@ impl Access {
         )?;
         Ok(data.claims)
     }
-    fn validate_rsa(&self, pubkey: &str, aud: String) -> Result<Claims> {
+    pub fn validate_rsa(&self, pubkey: &str, aud: String) -> Result<Claims> {
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_audience(&[aud]);
         let dec_key = DecodingKey::from_rsa_pem(pubkey.as_bytes()).expect("invalid public key");
