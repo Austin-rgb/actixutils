@@ -9,3 +9,14 @@ pub fn get_public_key() -> String {
     let p = env::var("RSA_PUBLIC_KEY_PATH").expect("missing RSA_PUBLIC_KEY_PATH");
     fs::read_to_string(&p).expect(&("could not access".to_string() + &p))
 }
+
+pub async fn remote_public_key() -> String {
+    let url = env::var("REMOTE_PUBLIC_KEY").expect("missing REMOTE PUBLIC KEY");
+    let response = reqwest::get(url)
+        .await
+        .expect("error occured in getting remote public key");
+    response
+        .text()
+        .await
+        .expect("could not get text content of response")
+}
