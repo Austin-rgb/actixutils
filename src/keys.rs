@@ -2,25 +2,13 @@ use std::{env, fs};
 
 use libsigners::{HS256Signer, RS256Signer, RS256Validator, Sign, Validate};
 
-enum KeyType {
-    HS256,
-    RS256,
-}
-
-fn key_type() -> KeyType {
-    let binding = env::var("KEY_TYPE").expect("KEY_TYPE not set");
-    let key_type = binding.as_str();
-    if key_type == "rs256" {
-        KeyType::RS256
-    } else {
-        KeyType::HS256
-    }
+pub fn get_public_key() -> String {
+    let p = env::var("RSA_PUBLIC_KEY_PATH").expect("missing RSA_PUBLIC_KEY_PATH");
+    fs::read_to_string(&p).expect(&("could not access".to_string() + &p))
 }
 
 fn load_rs256_validator(aud: String) -> Box<dyn Validate> {
-    let p = env::var("RSA_PUBLIC_KEY_PATH").expect("missing RSA_PUBLIC_KEY_PATH");
-    let public_key = fs::read_to_string(&p).expect(&("could not access".to_string() + &p));
-
+    let public_key = get_public_key();
     Box::new(RS256Validator::new(public_key, aud))
 }
 

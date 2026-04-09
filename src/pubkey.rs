@@ -3,7 +3,7 @@ use actix_web::{
     web::{self, ServiceConfig},
 };
 
-use crate::utils::get_public_key;
+use crate::keys::get_public_key;
 struct PublicKey {
     key: String,
 }

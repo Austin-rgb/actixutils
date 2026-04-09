@@ -8,5 +8,5 @@ actix-web = "4.12.1"
 anyhow = "1.0.102"
 futures-util = "0.3.32"
 jsonwebtoken = "9.3.1"
-libsigners = {path="../libsigners"}
+libsigners = {git="https://github.com/Austin-rgb/libsigners"}
 reqwest = "0.13.2"
