@@ -1,15 +1,16 @@
+use std::env;
+
 use actix_web::{
     HttpResponse, Responder, get,
     web::{self, ServiceConfig},
 };
 
-use crate::keys::get_public_key;
 struct PublicKey {
     key: String,
 }
 
 pub fn configure(cfg: &mut ServiceConfig) {
-    let key = get_public_key();
+    let key = env::var("validate.key").expect("validate.key not set");
     let data = PublicKey { key };
     cfg.service(
         web::scope("")
