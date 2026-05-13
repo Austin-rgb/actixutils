@@ -1,30 +1,30 @@
+use crate::common::Identity;
 use actix_web::{Error, FromRequest, HttpRequest, error::ErrorUnauthorized, http::header};
 use anyhow::Result;
 use futures_util::future::{Ready, ready};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
-use libsigners::Claims;
 pub struct Access {
     pub token: String,
 }
 
 impl Access {
-    pub fn validate_hmac(&self, secret: &str, aud: String) -> Result<Claims> {
+    pub fn validate_hmac(&self, secret: &str, aud: String) -> Result<Identity> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_audience(&[aud]);
 
-        let data = decode::<Claims>(
+        let data = decode::<Identity>(
             &self.token,
             &DecodingKey::from_secret(secret.as_bytes()),
             &validation,
         )?;
         Ok(data.claims)
     }
-    pub fn validate_rsa(&self, pubkey: &str, aud: String) -> Result<Claims> {
+    pub fn validate_rsa(&self, pubkey: &str, aud: String) -> Result<Identity> {
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_audience(&[aud]);
         let dec_key = DecodingKey::from_rsa_pem(pubkey.as_bytes()).expect("invalid public key");
 
-        let data = decode::<Claims>(&self.token, &dec_key, &validation)?;
+        let data = decode::<Identity>(&self.token, &dec_key, &validation)?;
         Ok(data.claims)
     }
 }

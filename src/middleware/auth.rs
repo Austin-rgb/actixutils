@@ -1,4 +1,4 @@
-use libsigners::Validate;
+use crate::{Identity, Validate};
 use actix_web::{
     Error, HttpMessage,
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
@@ -9,7 +9,7 @@ use futures_util::future::{LocalBoxFuture, Ready, ready};
 use std::sync::Arc;
 
 pub struct Auth {
-    pub validator: Arc<dyn Validate>,
+    pub validator: Arc<dyn Validate<Identity>>,
 }
 
 impl<S, B> Transform<S, ServiceRequest> for Auth
@@ -34,7 +34,7 @@ where
 
 pub struct AuthMiddleware<S> {
     service: Arc<S>,
-    signer: Arc<dyn Validate>,
+    signer: Arc<dyn Validate<Identity>>,
 }
 
 impl<S, B> Service<ServiceRequest> for AuthMiddleware<S>

@@ -6,12 +6,14 @@ pub mod middleware;
 mod provider;
 pub use provider::Provider;
 mod common;
+mod deps;
 mod hs256;
 mod identity;
+mod authority;
 mod rs256;
 mod signer_core;
-
 pub use common::{Authority, Identity};
+pub use deps::OrphanWrapper;
 pub use hs256::HS256Signer;
 pub use rs256::{RS256Signer, RS256Validator};
 pub use signer_core::{Sign, Validate};

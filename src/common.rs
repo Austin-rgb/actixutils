@@ -44,4 +44,9 @@ impl Authority {
             rcpt,
         }
     }
+
+    pub fn check(&self, perm_id: u16) -> bool {
+        let perm_value = 2 << perm_id;
+        self.role & perm_value == perm_value
+    }
 }
