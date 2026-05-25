@@ -10,7 +10,7 @@ impl FromRequest for Identity {
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         // 1. Get app state
-        let state = match req.app_data::<web::Data<dyn Provider<Arc<dyn Validate<Identity>>>>>() {
+        let state = match req.app_data::<Arc<dyn Validate<Identity>>>() {
             Some(data) => data,
             None => {
                 return ready(Err(ErrorUnauthorized("Missing app state")));
@@ -41,7 +41,7 @@ impl FromRequest for Identity {
         };
 
         // 4. Validate token
-        match state.provide().validate(token) {
+        match state.validate(token) {
             Ok(identity) => ready(Ok(identity)),
             Err(_) => ready(Err(ErrorUnauthorized("Invalid token"))),
         }

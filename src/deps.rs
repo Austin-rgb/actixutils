@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use crate::{HS256Signer, RS256Signer, RS256Validator, Sign, Validate};
-use ferrumec::di::{AsyncFromEnv, EnvContext, EnvError};
+use ferrumec::di::{AsyncFrom, EnvContext, EnvError};
 use serde::{Deserialize, Serialize};
 
-impl<T> AsyncFromEnv for OrphanWrapper<Arc<dyn Validate<T>>>
+impl<T> AsyncFrom<EnvContext, EnvError> for OrphanWrapper<Arc<dyn Validate<T>>>
 where
     T: for<'a> Deserialize<'a> + 'static,
 {
-    async fn from_env(ctx: &EnvContext) -> Result<Self, EnvError> {
+    async fn async_from(ctx: &EnvContext) -> Result<Self, EnvError> {
         let signer_type = ctx.get("validate.type")?;
         match signer_type {
             "hs256" => Ok(OrphanWrapper(Arc::new(HS256Signer::new(
@@ -26,11 +26,11 @@ where
     }
 }
 
-impl<T> AsyncFromEnv for OrphanWrapper<Arc<dyn Sign<T>>>
+impl<T> AsyncFrom<EnvContext, EnvError> for OrphanWrapper<Arc<dyn Sign<T>>>
 where
     T: Serialize + 'static,
 {
-    async fn from_env(ctx: &EnvContext) -> Result<Self, EnvError> {
+    async fn async_from(ctx: &EnvContext) -> Result<Self, EnvError> {
         let signer_type = ctx.get("sign.type")?;
         let aud = ctx.get("sign.aud")?.to_string();
         match signer_type {
