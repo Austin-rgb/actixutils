@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::{Provider, Validate, common::Identity};
-use actix_web::{Error, FromRequest, HttpRequest, dev::Payload, error::ErrorUnauthorized, web};
+use crate::{Validate, common::Identity};
+use actix_web::{Error, FromRequest, HttpRequest, dev::Payload, error::ErrorUnauthorized};
 use futures_util::future::{Ready, ready};
 
 impl FromRequest for Identity {
