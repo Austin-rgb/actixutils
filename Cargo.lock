@@ -753,8 +753,6 @@ name = "ferrumec"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
- "libsigners",
  "serde",
  "sqlx",
 ]
@@ -1478,17 +1476,6 @@ dependencies = [
  "libc",
  "plain",
  "redox_syscall 0.7.4",
-]
-
-[[package]]
-name = "libsigners"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "jsonwebtoken",
- "serde",
- "uuid",
 ]
 
 [[package]]
@@ -2965,7 +2952,6 @@ version = "1.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddd74a9687298c6858e9b88ec8935ec45d22e8fd5e6394fa1bd4e99a87789c76"
 dependencies = [
- "getrandom 0.4.2",
  "js-sys",
  "serde_core",
  "wasm-bindgen",
