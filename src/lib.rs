@@ -11,6 +11,7 @@ mod hs256;
 mod auth;
 mod rs256;
 mod signer_core;
+pub use auth::Auth;
 pub use common::{Authority, Identity};
 pub use deps::OrphanWrapper;
 pub use hs256::HS256Signer;
