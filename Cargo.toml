@@ -9,6 +9,8 @@ anyhow = "1.0.102"
 chrono = "0.4.44"
 futures-util = "0.3.32"
 jsonwebtoken = "9.3.1"
+rand = "0.10.1"
 reqwest = "0.13.2"
 serde = "1.0.228"
+tokio = "1.52.3"
 uuid = { version = "1.23.1", features = ["serde"] }
