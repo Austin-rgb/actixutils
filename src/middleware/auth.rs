@@ -70,7 +70,7 @@ where
             let claims = match signer.validate(&token) {
                 Ok(c) => c,
                 Err(e) => {
-                    println!("JWT validation error: {:?}", e);
+                    tracing::warn!("JWT validation error: {:?}", e);
                     return Err(ErrorUnauthorized("Invalid or expired token"));
                 }
             };
