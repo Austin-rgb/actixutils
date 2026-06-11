@@ -1,14 +1,14 @@
 use std::{
-    future::{ready, Ready},
+    future::{Ready, ready},
     rc::Rc,
     task::{Context, Poll},
     time::{Duration, Instant},
 };
 
 use actix_web::{
+    Error,
     body::MessageBody,
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    Error,
 };
 use futures_util::future::LocalBoxFuture;
 use rand::RngExt;
@@ -28,10 +28,7 @@ impl ResponseEqualizer {
         }
     }
 
-    pub fn with_jitter(
-        min_duration: Duration,
-        max_jitter: Duration,
-    ) -> Self {
+    pub fn with_jitter(min_duration: Duration, max_jitter: Duration) -> Self {
         Self {
             min_duration,
             max_jitter,
@@ -41,8 +38,7 @@ impl ResponseEqualizer {
 
 impl<S, B> Transform<S, ServiceRequest> for ResponseEqualizer
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>
-        + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: MessageBody + 'static,
 {
     type Response = ServiceResponse<B>;
@@ -51,10 +47,7 @@ where
     type Transform = ResponseEqualizerMiddleware<S>;
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
-    fn new_transform(
-        &self,
-        service: S,
-    ) -> Self::Future {
+    fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(ResponseEqualizerMiddleware {
             service: Rc::new(service),
             min_duration: self.min_duration,
@@ -71,26 +64,18 @@ pub struct ResponseEqualizerMiddleware<S> {
 
 impl<S, B> Service<ServiceRequest> for ResponseEqualizerMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>
-        + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: MessageBody + 'static,
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future =
-        LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(
-        &self,
-        ctx: &mut Context<'_>,
-    ) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(&self, ctx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.service.poll_ready(ctx)
     }
 
-    fn call(
-        &self,
-        req: ServiceRequest,
-    ) -> Self::Future {
+    fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = self.service.clone();
         let min_duration = self.min_duration;
         let max_jitter = self.max_jitter;
@@ -107,8 +92,7 @@ where
             }
 
             if !max_jitter.is_zero() {
-                let jitter_ns = rand::rng()
-                    .random_range(0..=max_jitter.as_nanos() as u64);
+                let jitter_ns = rand::rng().random_range(0..=max_jitter.as_nanos() as u64);
 
                 sleep(Duration::from_nanos(jitter_ns)).await;
             }

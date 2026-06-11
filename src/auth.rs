@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Validate};
+use crate::Validate;
 use actix_web::{Error, FromRequest, HttpRequest, dev::Payload, error::ErrorUnauthorized};
 use futures_util::future::{Ready, ready};
 

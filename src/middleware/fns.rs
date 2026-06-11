@@ -1,4 +1,3 @@
-use std::pin::Pin;
 use crate::auth::Auth;
 use crate::{Authority, Identity};
 use actix_web::{
@@ -7,6 +6,7 @@ use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
     middleware::Next,
 };
+use std::pin::Pin;
 
 pub async fn identity(
     mut req: ServiceRequest,

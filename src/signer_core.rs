@@ -7,4 +7,3 @@ pub trait Sign<T>: Send + Sync + 'static {
 pub trait Validate<T>: Send + Sync + 'static {
     fn validate(&self, token: &str) -> Result<T>;
 }
-
