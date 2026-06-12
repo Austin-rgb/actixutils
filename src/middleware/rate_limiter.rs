@@ -76,7 +76,7 @@ where
 
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(RateLimiterMiddleware {
-            service:Arc::new(service),
+            service: Arc::new(service),
             limiter: self.clone(),
             _marker: PhantomData,
         }))
