@@ -27,6 +27,7 @@
 
 mod attach_local;
 mod auth;
+mod cache;
 mod constant_time;
 #[cfg(feature = "es")]
 mod context;
@@ -34,11 +35,14 @@ mod context;
 mod fns;
 mod idempotency;
 mod pagination;
+mod permission;
 mod rate_limiter;
 mod request_id;
 mod session;
 #[cfg(test)]
 mod test_session;
+pub use cache::{MemoryCache,Cache, CacheMiddleware,CacheStore,CachedResponse};
+pub use permission::{PermissionError,Permissions,Permission,PermissionSet,Principal};
 pub use attach_local::{AttachLocal, SetLocal};
 pub use auth::Auth;
 pub use constant_time::ResponseEqualizer;

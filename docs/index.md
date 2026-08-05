@@ -9,12 +9,10 @@ Django-REST-Framework-inspired CRUD toolkit over `sqlx` + Postgres.
 Note that this project is still a work in progress and is still going through changes rapidly.
 We deeply welcome ideas for feature additions and optimizations.
 
-Here is [what's new in v0.4](/CHANGELOG.md)
+Here is [what's new in v0.3.1](/CHANGELOG.md)
 
 This README documents the crate as it currently exists in `src/`. It doesn't cover
 work in progress that hasn't landed yet (e.g. `viewset`'s SQLite support).
-
-[Documentation](https://ferrumec.github.io/actixutils/)
 
 ## Crate layout
 
@@ -148,6 +146,8 @@ Cookie-based, server-side sessions live in `middleware`, **not** `extractors`:
 | `Session<T>` / `SessionMiddleware` | Cookie-based server-side sessions (see above) |
 | `AttachLocal<T>` / `SetLocal` | Generic helper: extracts a `T` up front, then runs the rest of the request inside `T::scope(...)` — the mechanism `PaginationMiddleware` is built on |
 
+[Getting started with middlewares](middleware)
+
 ## The `viewset` module (feature `viewset`)
 
 A small, Django-REST-Framework-inspired CRUD toolkit for building admin-style REST
@@ -168,6 +168,8 @@ needs only a handful of `impl` blocks plus entity metadata (usually generated vi
 | `RequestContext<U>` | Per-request bag of `db`, optional authenticated `user`, `permissions`, `tenant_id`, `request_id`, `trace_id`, `locale`. Applications implement `FromRequest` for their own `RequestContext<YourUser>` |
 | `ApiError` / `ApiResult<T>` | Shared error enum implementing `ResponseError`, with `sqlx::Error` conversion |
 | `SqlType` / `SqlValue` / `Field` | Typed column metadata so inserts/updates bind native Postgres types instead of everything going through `jsonb` |
+
+[Getting started with ViewSets](viewset)
 
 ## Testing
 
