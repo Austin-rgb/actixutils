@@ -66,7 +66,7 @@
 //! | [`HS256Signer`] | HMAC-SHA-256 signer + validator |
 //! | [`RS256Signer`] / [`RS256Validator`] | RSA-SHA-256 signer / validator |
 //! | [`Sign<T>`] / [`Validate<T>`] | Core signing / validation traits |
-//! | [`SessionStore<T>`] | General-purpose sync session-store trait (not used by [`middleware::Session`], which has its own async store trait) |
+//! | [`Store<K, V>`] | General-purpose async key-value store trait, used by [`middleware::Cache`](middleware::Cache), [`middleware::RateLimiter`](middleware::RateLimiter), and [`middleware::Session`](middleware::Session) |
 //! | [`middleware`] | Full middleware suite, including [`Session<T>`](middleware::Session) cookie sessions (see module docs) |
 //! | `pubkey::configure` | Actix route that serves the public key at `/.well-known/public-key.pem` |
 
@@ -75,10 +75,8 @@ pub mod locals;
 pub mod middleware;
 pub mod pubkey;
 
-#[cfg(feature = "viewset")]
-pub mod viewset;
 #[cfg(feature = "jwt")]
-pub use extractors::Jwt;
-pub use locals::{Authority, Identity, Provider, SessionStore, Sign, Validate};
+pub use extractors::{Filters, Jwt, Session};
+pub use locals::{Authority, Identity, Provider, Sign, Store, Validate};
 #[cfg(feature = "jwt")]
 pub use locals::{HS256Signer, RS256Signer, RS256Validator};

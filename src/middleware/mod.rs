@@ -18,6 +18,8 @@
 //! | [`Pagination`] / [`PaginationMiddleware`] | Parses `?page=&limit=` and stores params in a task-local (state: [`locals::pagination`](crate::locals::pagination)) |
 //! | [`Session<T>`] / [`SessionMiddleware`] | Cookie-based, server-side session storage; loads/saves via an async store trait implemented by the caller |
 //! | [`AttachLocal<T>`] / [`SetLocal`] | Generic helper that extracts a `T` up front and runs the rest of the request inside `T::scope` (e.g. to populate a task-local) |
+//! | [`PathParams`] | Merges matched path parameters into [`Filters`](crate::extractors::Filters), overlaying them on the query string |
+//! | [`TimeoutMiddleware`] | Aborts a request with `504 Gateway Timeout` if it exceeds a fixed duration |
 //!
 //! ## Helper functions
 //!
@@ -28,6 +30,7 @@
 mod attach_local;
 mod auth;
 mod cache;
+mod coalesce;
 mod constant_time;
 #[cfg(feature = "es")]
 mod context;
@@ -35,16 +38,19 @@ mod context;
 mod fns;
 mod idempotency;
 mod pagination;
+mod path_params;
 mod permission;
 mod rate_limiter;
 mod request_id;
 mod session;
+mod test_coalesce;
 #[cfg(test)]
 mod test_session;
-pub use cache::{MemoryCache,Cache, CacheMiddleware,CacheStore,CachedResponse};
-pub use permission::{PermissionError,Permissions,Permission,PermissionSet,Principal};
+mod timeout;
 pub use attach_local::{AttachLocal, SetLocal};
 pub use auth::Auth;
+pub use cache::{Cache, CacheMiddleware, CacheStore, CachedResponse};
+pub use coalesce::Singleflight;
 pub use constant_time::ResponseEqualizer;
 #[cfg(feature = "es")]
 pub use context::{Context, GetId, ReadContext};
@@ -52,6 +58,9 @@ pub use context::{Context, GetId, ReadContext};
 pub use fns::{authority, identity};
 pub use idempotency::Idempotency;
 pub use pagination::{Pagination, PaginationMiddleware};
+pub use path_params::PathParams;
+pub use permission::{Permission, PermissionError, PermissionSet, Permissions, Principal};
 pub use rate_limiter::RateLimiter;
 pub use request_id::{RequestId, RequestIdStr};
-pub use session::{Session, SessionMiddleware};
+pub use session::SessionMiddleware;
+pub use timeout::TimeoutMiddleware;

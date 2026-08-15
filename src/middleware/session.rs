@@ -3,11 +3,7 @@
 //! This is the crate's built-in session mechanism: [`SessionMiddleware`] resolves a
 //! session cookie to a value of type `T` on each request, exposes it to handlers via
 //! the [`Session<T>`] extractor, and persists any changes back to a caller-supplied
-//! store after the response is produced.
-//!
-//! Note this module defines its own async [`SessionStore`] trait, distinct from the
-//! synchronous [`locals::SessionStore<T>`](crate::locals::SessionStore) trait exported
-//! elsewhere in the crate — that other trait is not used by this middleware.
+//! [`Store`](crate::Store) after the response is produced.
 //!
 //! # Example
 //! ```ignore
@@ -30,113 +26,22 @@
 //! ```
 
 use actix_web::{
-    Error, FromRequest, HttpMessage, HttpRequest,
+    Error, HttpMessage,
     body::MessageBody,
-    dev::{Payload, Service, ServiceRequest, ServiceResponse, Transform},
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
     error,
 };
-use async_trait::async_trait;
+
+use crate::Store;
+use crate::extractors::Session;
 use futures_util::future::LocalBoxFuture;
 use std::{
     future::{Ready, ready},
     rc::Rc,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::{Arc, atomic::Ordering},
     task::{Context, Poll},
 };
-use tokio::sync::RwLock;
 use uuid::Uuid;
-
-type SharedSession<T> = Arc<RwLock<T>>;
-
-/// Async backing store for [`SessionMiddleware`].
-///
-/// Implement this on your own persistence layer (database, Redis, in-memory map, ...).
-/// `Session` is the session payload type; it must be `Clone + Default` because a
-/// missing/invalid cookie yields a fresh `Session::default()` rather than an error
-/// (unless the middleware was constructed with [`SessionMiddleware::required`]).
-#[async_trait]
-pub trait SessionStore: Send + Sync + 'static {
-    /// The session payload type persisted by this store.
-    type Session: Send + Sync + Clone + Default + 'static;
-
-    /// Load the session identified by `session_id`, if it exists.
-    async fn load(&self, session_id: &Uuid) -> Result<Option<Self::Session>, Error>;
-
-    /// Persist `session` under `session_id`, overwriting any existing value.
-    async fn save(&self, session_id: &Uuid, session: &Self::Session) -> Result<(), Error>;
-
-    /// Remove the session identified by `session_id`.
-    async fn delete(&self, session_id: &Uuid) -> Result<(), Error>;
-}
-
-/// A handle to the current request's session data, obtained via
-/// [`FromRequest`] once [`SessionMiddleware`] has populated the request extensions.
-///
-/// Cloning is cheap (it clones the underlying `Arc`s and shares the same data).
-/// Call [`read`](Self::read) for a read-only view or [`write`](Self::write) to mutate
-/// the session; any call to `write` marks the session dirty so
-/// [`SessionMiddleware`] persists it via the store after the handler returns.
-pub struct Session<T> {
-    data: SharedSession<T>,
-    dirty: Arc<AtomicBool>,
-}
-
-impl<T> Clone for Session<T> {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data.clone(),   // Arc clone
-            dirty: self.dirty.clone(), // Arc clone
-        }
-    }
-}
-
-impl<T> Session<T> {
-    pub(crate) fn new(session: T) -> Self {
-        Self {
-            data: Arc::new(RwLock::new(session)),
-            dirty: Arc::new(AtomicBool::new(false)),
-        }
-    }
-    /// Acquire a read lock and view the current session value.
-    pub async fn read(&self) -> tokio::sync::RwLockReadGuard<'_, T> {
-        self.data.read().await
-    }
-    /// Acquire a write lock to mutate the session value.
-    ///
-    /// Marks the session dirty (regardless of whether the guard is actually used to
-    /// change anything), so [`SessionMiddleware`] will persist it via the store once
-    /// the handler finishes.
-    pub async fn write(&self) -> tokio::sync::RwLockWriteGuard<'_, T> {
-        // <-- &self not &mut self
-        self.dirty.store(true, Ordering::Relaxed); // mark dirty on any write
-        self.data.write().await
-    }
-    pub(crate) fn is_dirty(&self) -> bool {
-        self.dirty.load(Ordering::Relaxed)
-    }
-    pub(crate) fn set_clean(&self) {
-        self.dirty.store(false, Ordering::Relaxed);
-    }
-}
-
-impl<T: Send + Sync + 'static> FromRequest for Session<T> {
-    type Error = Error;
-    type Future = Ready<Result<Self, Error>>;
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        match req.extensions().get::<Arc<Session<T>>>() {
-            Some(session) => ready(Ok((**session).clone())), // clone the Arc<Session<T>>
-            None => {
-                tracing::error!("No session in request. Did you forget to wrap SessionMiddleware?");
-                ready(Err(error::ErrorInternalServerError(
-                    "Session requested without SessionMiddleware",
-                )))
-            }
-        }
-    }
-}
 
 /// Middleware factory for cookie-based session storage.
 ///
@@ -145,18 +50,18 @@ impl<T: Send + Sync + 'static> FromRequest for Session<T> {
 /// cookies are rejected with `401 Unauthorized`). Customise the cookie name with
 /// [`cookie_name`](Self::cookie_name).
 pub struct SessionMiddleware<S> {
-    store: Arc<S>,
+    store: Arc<dyn Store<Uuid, S>>,
     cookie_name: String,
     required: bool,
 }
 
-impl<S> SessionMiddleware<S> {
+impl<Sess> SessionMiddleware<Sess> {
     /// Create a `SessionMiddleware` backed by `store`.
     ///
     /// A request with no session cookie, or one that fails to parse as a `Uuid`, is
     /// given a fresh default session (a new cookie is issued on the response) rather
     /// than being rejected. The cookie name defaults to `"session"`.
-    pub fn new(store: Arc<S>) -> Self {
+    pub fn new(store: Arc<dyn Store<Uuid, Sess>>) -> Self {
         Self {
             store,
             cookie_name: "session".into(),
@@ -169,7 +74,7 @@ impl<S> SessionMiddleware<S> {
     ///
     /// A request with no session cookie, or one that fails to parse as a `Uuid`,
     /// causes the middleware to return `401 Unauthorized` before the handler runs.
-    pub fn required(store: Arc<S>) -> Self {
+    pub fn required(store: Arc<dyn Store<Uuid, Sess>>) -> Self {
         Self {
             store,
             cookie_name: "session".into(),
@@ -184,16 +89,15 @@ impl<S> SessionMiddleware<S> {
     }
 }
 
-impl<S, B, Store> Transform<S, ServiceRequest> for SessionMiddleware<Store>
+impl<S, B, Sess: Default + Clone + 'static> Transform<S, ServiceRequest> for SessionMiddleware<Sess>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
-    Store: SessionStore + 'static,
     B: MessageBody + 'static,
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Transform = SessionMiddlewareService<S, Store>;
+    type Transform = SessionMiddlewareService<S, Sess>;
     type InitError = ();
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
     fn new_transform(&self, service: S) -> Self::Future {
@@ -207,18 +111,18 @@ where
 }
 
 /// The inner service produced by [`SessionMiddleware`].
-pub struct SessionMiddlewareService<S, Store> {
-    service: Rc<S>,
-    store: Arc<Store>,
+pub struct SessionMiddlewareService<R, S> {
+    service: Rc<R>,
+    store: Arc<dyn Store<Uuid, S>>,
     cookie_name: String,
     required: bool,
 }
 
-impl<S, B, Store> Service<ServiceRequest> for SessionMiddlewareService<S, Store>
+impl<S, B, Sess: Default + Clone + 'static> Service<ServiceRequest>
+    for SessionMiddlewareService<S, Sess>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
-    Store: SessionStore + 'static,
     B: MessageBody + 'static,
 {
     type Response = ServiceResponse<B>;
@@ -248,7 +152,7 @@ where
                             Uuid::new_v4()
                         }
                     };
-                    let session_data = store.load(&id).await?.unwrap_or_default();
+                    let session_data = store.get(&id).await?.unwrap_or_default();
                     req.extensions_mut().insert(session_data.clone());
                     (id, Session::new(session_data), new_session)
                 }
@@ -257,7 +161,7 @@ where
                         return Err(error::ErrorUnauthorized("no session"));
                     }
                     let id = Uuid::new_v4();
-                    let session = Session::new(Store::Session::default());
+                    let session = Session::new(Sess::default());
                     session.dirty.store(true, Ordering::Relaxed); // new session must be saved once
                     (id, session, true)
                 }
@@ -271,7 +175,7 @@ where
             // Only save if dirty
             if session.is_dirty() {
                 let session_data = session.read().await;
-                store.save(&session_id, &*session_data).await?;
+                store.set(&session_id, session_data.clone()).await?;
                 session.set_clean(); // reset flag
             }
 

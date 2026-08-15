@@ -1,16 +1,23 @@
-//! [`Filters`] — collects arbitrary query-string parameters for manual filtering.
+//! Ad-hoc query-string filter extractor.
+//!
+//! [`Filters`] collects arbitrary `?field=value` query-string pairs into a
+//! `HashMap`, for handlers that accept a flexible set of filter parameters
+//! rather than a fixed, strongly-typed query struct.
 
-use actix_web::{Error, FromRequest, HttpRequest, dev::Payload, error::ErrorBadRequest, web};
+use actix_web::{
+    Error, FromRequest, HttpMessage, HttpRequest, dev::Payload, error::ErrorBadRequest, web,
+};
 use futures_util::future::LocalBoxFuture;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 
-/// An extractor that collects every query-string parameter into a `HashMap<String, String>`.
+/// Extractor that collects query-string parameters into a `HashMap`.
 ///
-/// Unlike a typed `web::Query<T>`, this accepts any set of key/value pairs without a
-/// fixed schema, which is useful for handlers that apply ad-hoc filtering (e.g.
-/// `?status=active&owner=42`) against a repository or query builder. Derefs to the
-/// inner `HashMap` for convenient access.
+/// If [`middleware::PathParams`](crate::middleware::PathParams) (or any
+/// other middleware) has already inserted a `Filters` value into the
+/// request extensions, that value is reused as-is; otherwise this parses
+/// the raw query string directly. Derefs to `HashMap<String, String>` for
+/// convenient lookups.
 #[derive(Debug, Clone, Default)]
 pub struct Filters(pub HashMap<String, String>);
 
@@ -33,6 +40,12 @@ impl FromRequest for Filters {
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+        // Prefer the Filters already constructed by middleware.
+        if let Some(filters) = req.extensions().get::<Filters>() {
+            return Box::pin(std::future::ready(Ok(filters.clone())));
+        }
+
+        // Otherwise parse the query string directly.
         let fut = web::Query::<HashMap<String, String>>::from_request(req, payload);
 
         Box::pin(async move {

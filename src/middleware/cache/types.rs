@@ -1,8 +1,8 @@
 //! Types used by the HTTP cache middleware.
 
-use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
+use actix_web::http::StatusCode;
+use actix_web::http::header::{HeaderName, HeaderValue};
 use bytes::Bytes;
 
 /// A fully-buffered HTTP response, suitable for storing in a [`CacheStore`]
@@ -11,12 +11,16 @@ use bytes::Bytes;
 /// [`CacheStore`]: crate::middleware::cache::store::CacheStore
 #[derive(Debug, Clone)]
 pub struct CachedResponse {
+    /// The HTTP status code the original response was returned with.
     pub status: StatusCode,
+    /// The response headers to replay, in their original order.
     pub headers: Vec<(HeaderName, HeaderValue)>,
+    /// The fully-buffered response body.
     pub body: Bytes,
 }
 
 impl CachedResponse {
+    /// Construct a `CachedResponse` from its constituent parts.
     pub fn new(status: StatusCode, headers: Vec<(HeaderName, HeaderValue)>, body: Bytes) -> Self {
         Self {
             status,

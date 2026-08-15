@@ -34,8 +34,8 @@
 //!
 //! ```rust,no_run
 //! use actix_web::App;
-//! use actixutils_permissions::{PermissionSet, Permissions};
-//! # use actixutils_permissions::Principal;
+//! use actixutils::middleware::{PermissionSet, Permissions};
+//! # use actixutils::middleware::Principal;
 //! # #[derive(Clone)] struct User { role: u128 }
 //! # impl Principal for User { fn role(&self) -> u128 { self.role } }
 //!
@@ -82,7 +82,7 @@ use super::principal::Principal;
 ///
 /// ```rust,no_run
 /// use actix_web::App;
-/// use actixutils_permissions::{PermissionSet, Permissions, Principal};
+/// use actixutils::middleware::{PermissionSet, Permissions, Principal};
 ///
 /// #[derive(Clone)]
 /// struct User { role: u128 }
@@ -111,8 +111,8 @@ impl<P> Permissions<P> {
     /// # Examples
     ///
     /// ```
-    /// use actixutils_permissions::{PermissionSet, Permissions};
-    /// # use actixutils_permissions::Principal;
+    /// use actixutils::middleware::{PermissionSet, Permissions};
+    /// # use actixutils::middleware::Principal;
     /// # #[derive(Clone)] struct User { role: u128 }
     /// # impl Principal for User { fn role(&self) -> u128 { self.role } }
     ///
@@ -215,13 +215,13 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::Principal;
     use super::*;
+    use super::{PermissionSet, Permissions};
+    use crate::middleware::permission::Permission;
     use actix_web::dev::{Service, Transform};
     use actix_web::{App, HttpResponse, http::Method, test, web};
-use std::task::{Poll,Context};
-    use crate::middleware::permission::Permission;
-    use super::{Permissions, PermissionSet};
-    use super::Principal;
+    use std::task::{Context, Poll};
 
     #[derive(Clone, Debug)]
     struct User {
@@ -278,7 +278,7 @@ use std::task::{Poll,Context};
             self.service.poll_ready(cx)
         }
 
-        fn call(&self, mut req: ServiceRequest) -> Self::Future {
+        fn call(&self, req: ServiceRequest) -> Self::Future {
             req.extensions_mut().insert(self.principal.clone());
             self.service.call(req)
         }
@@ -313,7 +313,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/users", web::get().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/users",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User { role: 0b0 })),
         )
         .await;
@@ -331,7 +334,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/users", web::get().to(|| async { HttpResponse::Ok() })),
+                .route(
+                    "/users",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                ),
         )
         .await;
 
@@ -348,7 +354,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/other", web::get().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/other",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User {
                     role: 0b1111_1111_1111_1111,
                 })),
@@ -368,7 +377,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/users", web::post().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/users",
+                    web::post().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User { role: 0b1 })),
         )
         .await;
@@ -390,7 +402,7 @@ use std::task::{Poll,Context};
                 .wrap(Permissions::<User>::new(permissions))
                 .route(
                     "/users/{id}",
-                    web::get().to(|| async { HttpResponse::Ok() }),
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
                 )
                 .wrap(InsertPrincipal(User { role: 0b100 })),
         )
@@ -409,7 +421,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/users", web::get().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/users",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User { role: 0b1 })),
         )
         .await;
@@ -429,7 +444,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/users", web::get().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/users",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User { role: 0b1 })),
         )
         .await;
@@ -447,7 +465,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/admin", web::get().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/admin",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User { role: 1u128 << 127 })),
         )
         .await;
@@ -464,7 +485,10 @@ use std::task::{Poll,Context};
         let app = test::init_service(
             App::new()
                 .wrap(Permissions::<User>::new(permissions))
-                .route("/users", web::get().to(|| async { HttpResponse::Ok() }))
+                .route(
+                    "/users",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                )
                 .wrap(InsertPrincipal(User { role: 0b1 })),
         )
         .await;
